@@ -2,5 +2,7 @@
   "name": "Northern Railway Media & PR Dashboard",
   "description": "Comprehensive responsive media monitoring and PR dashboard for Northern Railway featuring Admin Management, News Posting, Sentiment Analytics, Master Settings, and User News Portal.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

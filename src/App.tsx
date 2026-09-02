@@ -12,6 +12,7 @@ import { MasterSettingsView } from './components/admin/MasterSettingsView';
 import { ReportAnalyticsView } from './components/admin/ReportAnalyticsView';
 import { UserNewsPortalView } from './components/UserNewsPortalView';
 import { AuthModal } from './components/auth/AuthModal';
+import { LoginPage } from './components/auth/LoginPage';
 import {
   AdminUser,
   AppUser,
@@ -40,7 +41,7 @@ import {
 import { ShieldAlert, LogIn, UserPlus, Newspaper, CheckCircle2 } from 'lucide-react';
 
 export default function App() {
-  // Authentication & Session Management
+  // Authentication & Session Management: Start with null so login page is displayed on the front
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     const saved = localStorage.getItem('nr_media_portal_session');
     if (saved) {
@@ -50,16 +51,7 @@ export default function App() {
         return null;
       }
     }
-    // Default initial signed in user
-    return {
-      id: 'admin-1',
-      name: 'Sandeep Kumar',
-      email: 'iamkumarsandeep12@gmail.com',
-      phone: '+91 98765 43210',
-      role: 'Super Admin',
-      division: 'Headquarters (Baroda House)',
-      department: 'Executive Administration',
-    };
+    return null;
   });
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -325,6 +317,38 @@ export default function App() {
   const handleDeleteCity = (id: number) => {
     setCities(cities.filter((c) => c.id !== id));
   };
+
+  // If not authenticated, show the official Northern Railway Login & Authentication screen on the front
+  if (!currentUser) {
+    return (
+      <>
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2.5 text-xs font-medium animate-in slide-in-from-bottom-3 duration-200 border border-slate-700">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+        <LoginPage
+          onLoginSuccess={handleLoginSuccess}
+          onSignupSuccess={handleSignupSuccess}
+          divisions={divisions}
+          roles={roles}
+          onGuestAccess={() => {
+            const guest: AuthUser = {
+              id: 'guest-' + Date.now(),
+              name: 'Public Press Reader',
+              email: 'guest.reader@northernrailway.in',
+              role: 'Public Reader',
+              division: 'Northern Railway Zone',
+              department: 'Press Bureau',
+            };
+            handleLoginSuccess(guest);
+            setPortalMode('user');
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-800">
