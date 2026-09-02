@@ -21,7 +21,8 @@ interface ReportAnalyticsViewProps {
 
 export const ReportAnalyticsView: React.FC<ReportAnalyticsViewProps> = ({ newsItems, divisions }) => {
   const [selectedDivision, setSelectedDivision] = useState('All');
-  const [dateRange, setDateRange] = useState('Current Month (June 2025)');
+  const currentMonthYear = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  const [dateRange, setDateRange] = useState(`Current Month (${currentMonthYear})`);
   const [isExporting, setIsExporting] = useState(false);
 
   const filteredNews = newsItems.filter(

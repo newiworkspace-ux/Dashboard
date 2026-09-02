@@ -136,7 +136,7 @@ export default function App() {
       subDepartment: newsData.subDepartment || 'Passenger Amenities',
       state: newsData.state || 'Uttar Pradesh',
       city: newsData.city || 'Hardoi',
-      date: newsData.date || '26-06-2025',
+      date: newsData.date || new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
       time: newsData.time || '12:00 pm',
       originUrl: newsData.originUrl,
       mediaType: newsData.mediaType || 'Print Media',

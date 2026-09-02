@@ -48,7 +48,15 @@ export const NewsPostForm: React.FC<NewsPostFormProps> = ({
   const [subDepartment, setSubDepartment] = useState(initialData?.subDepartment || 'Passenger Amenities');
   const [state, setState] = useState(initialData?.state || 'Uttar Pradesh');
   const [city, setCity] = useState(initialData?.city || 'Hardoi');
-  const [date, setDate] = useState(initialData?.date || '26-06-2025');
+  const getTodayFormatted = () => {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const [date, setDate] = useState(initialData?.date || getTodayFormatted());
   const [originUrl, setOriginUrl] = useState(initialData?.originUrl || '');
   const [mediaType, setMediaType] = useState<MediaType>(initialData?.mediaType || 'Print Media');
   const [sentiment, setSentiment] = useState<SentimentType>(initialData?.sentiment || 'Positive');
@@ -97,7 +105,7 @@ export const NewsPostForm: React.FC<NewsPostFormProps> = ({
         subDepartment,
         state,
         city,
-        date: date || 'Jun 26, 2025',
+        date: date || getTodayFormatted(),
         time: '12:30 pm',
         originUrl,
         mediaType,
@@ -307,7 +315,7 @@ export const NewsPostForm: React.FC<NewsPostFormProps> = ({
                 type="text"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                placeholder="26-06-2025"
+                placeholder="DD-MM-YYYY"
                 className="w-full text-xs px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-sky-500 focus:outline-none"
               />
               <Calendar className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
