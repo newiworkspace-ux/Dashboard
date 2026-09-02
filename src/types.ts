@@ -95,6 +95,17 @@ export interface MasterCity {
   updatedDate: string;
 }
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: string;
+  division?: string;
+  department?: string;
+  avatarUrl?: string;
+}
+
 export type AdminViewType =
   | 'dashboard'
   | 'admin_list'

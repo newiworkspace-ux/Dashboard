@@ -15,9 +15,12 @@ import {
   Compass,
   Radio,
   FileText,
-  X
+  X,
+  LogOut,
+  LogIn,
+  User
 } from 'lucide-react';
-import { AdminViewType, UserViewType } from '../../types';
+import { AdminViewType, UserViewType, AuthUser } from '../../types';
 
 interface SidebarProps {
   portalMode: 'admin' | 'user';
@@ -27,6 +30,9 @@ interface SidebarProps {
   onSelectUserView: (view: UserViewType) => void;
   isOpen: boolean;
   onClose: () => void;
+  currentUser?: AuthUser | null;
+  onOpenAuth?: (mode?: 'login' | 'signup') => void;
+  onLogout?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -37,6 +43,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectUserView,
   isOpen,
   onClose,
+  currentUser,
+  onOpenAuth,
+  onLogout,
 }) => {
   const [isMasterOpen, setIsMasterOpen] = useState(
     adminView.startsWith('department') ||
@@ -359,10 +368,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Sidebar Footer info */}
-        <div className="p-3 border-t border-white/15 bg-black/10 text-[10px] text-sky-100 text-center">
-          <p className="font-semibold tracking-wider">NORTHERN RAILWAY</p>
-          <p className="text-white/60 text-[9px] mt-0.5">Govt. of India &bull; PR Cell</p>
+        {/* Sidebar Footer User Info & Logout / Login action */}
+        <div className="p-3 border-t border-white/15 bg-black/20 text-xs">
+          {currentUser ? (
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-white text-[#0070ba] flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                  {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-white text-[11px] truncate leading-tight">
+                    {currentUser.name}
+                  </p>
+                  <p className="text-[10px] text-sky-200 truncate">
+                    {currentUser.role}
+                  </p>
+                </div>
+              </div>
+
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="p-1.5 bg-white/10 hover:bg-rose-600/80 text-white rounded-md transition-colors shrink-0"
+                  title="Log Out (लॉग आउट)"
+                  aria-label="Log Out"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <button
+                onClick={() => onOpenAuth?.('login')}
+                className="w-full py-1.5 px-3 bg-white text-[#0070ba] hover:bg-sky-50 font-bold rounded text-xs flex items-center justify-center space-x-1.5 transition-colors shadow-xs"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Log In (साइन इन)</span>
+              </button>
+              <button
+                onClick={() => onOpenAuth?.('signup')}
+                className="w-full py-1 px-3 bg-white/10 hover:bg-white/20 text-white font-medium rounded text-[11px] flex items-center justify-center space-x-1.5 transition-colors"
+              >
+                <span>Register (पंजीकरण)</span>
+              </button>
+            </div>
+          )}
+
+          <div className="mt-2.5 pt-2 border-t border-white/10 text-[9px] text-sky-100/70 text-center">
+            <p className="font-semibold tracking-wider uppercase">NORTHERN RAILWAY &bull; PR CELL</p>
+          </div>
         </div>
       </aside>
     </>

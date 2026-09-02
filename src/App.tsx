@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
 import { Footer } from './components/common/Footer';
@@ -11,6 +11,7 @@ import { NewsPostForm } from './components/admin/NewsPostForm';
 import { MasterSettingsView } from './components/admin/MasterSettingsView';
 import { ReportAnalyticsView } from './components/admin/ReportAnalyticsView';
 import { UserNewsPortalView } from './components/UserNewsPortalView';
+import { AuthModal } from './components/auth/AuthModal';
 import {
   AdminUser,
   AppUser,
@@ -23,6 +24,7 @@ import {
   MasterSource,
   MasterState,
   MasterCity,
+  AuthUser,
 } from './types';
 import {
   INITIAL_ADMIN_USERS,
@@ -35,8 +37,35 @@ import {
   INITIAL_CITIES,
   INITIAL_NEWS_ITEMS,
 } from './mockData';
+import { ShieldAlert, LogIn, UserPlus, Newspaper, CheckCircle2 } from 'lucide-react';
 
 export default function App() {
+  // Authentication & Session Management
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    const saved = localStorage.getItem('nr_media_portal_session');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    // Default initial signed in user
+    return {
+      id: 'admin-1',
+      name: 'Sandeep Kumar',
+      email: 'iamkumarsandeep12@gmail.com',
+      phone: '+91 98765 43210',
+      role: 'Super Admin',
+      division: 'Headquarters (Baroda House)',
+      department: 'Executive Administration',
+    };
+  });
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   // Portal Mode: Admin Management Portal or User News Portal
   const [portalMode, setPortalMode] = useState<'admin' | 'user'>('admin');
   const [adminView, setAdminView] = useState<AdminViewType>('dashboard');
@@ -57,6 +86,50 @@ export default function App() {
   // Currently editing news item (for Edit form)
   const [editingNewsItem, setEditingNewsItem] = useState<NewsItem | null>(null);
 
+  // Auth Handlers
+  const handleOpenAuth = (mode: 'login' | 'signup' = 'login') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
+  const handleLoginSuccess = (user: AuthUser) => {
+    setCurrentUser(user);
+    localStorage.setItem('nr_media_portal_session', JSON.stringify(user));
+    setIsAuthModalOpen(false);
+    showToast(`Welcome back, ${user.name}! You are now logged in.`);
+  };
+
+  const handleSignupSuccess = (user: AuthUser) => {
+    setCurrentUser(user);
+    localStorage.setItem('nr_media_portal_session', JSON.stringify(user));
+    // Also add to app users list
+    const newAppUser: AppUser = {
+      id: user.id,
+      srNo: appUsers.length + 1,
+      name: user.name,
+      username: user.email.split('@')[0],
+      email: user.email,
+      phone: user.phone || '+91 98765 00000',
+      status: 'Active',
+    };
+    setAppUsers([newAppUser, ...appUsers]);
+    setIsAuthModalOpen(false);
+    showToast(`Account created successfully! Logged in as ${user.name}.`);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('nr_media_portal_session');
+    showToast('Logged out successfully. Session closed.');
+  };
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
+
   // Handlers for News CRUD
   const handleAddNews = (newsData: Partial<NewsItem>) => {
     const newItem: NewsItem = {
@@ -76,7 +149,7 @@ export default function App() {
       originUrl: newsData.originUrl,
       mediaType: newsData.mediaType || 'Print Media',
       sentiment: newsData.sentiment || 'Positive',
-      roleName: 'Content Analyst',
+      roleName: currentUser?.role || 'Content Analyst',
       status: newsData.status || 'Published',
       accidentalNotification: newsData.accidentalNotification || false,
       description: newsData.description || '',
@@ -85,6 +158,7 @@ export default function App() {
     };
     setNewsItems([newItem, ...newsItems]);
     setAdminView('news_post_list');
+    showToast('News clipping published successfully.');
   };
 
   const handleUpdateNews = (newsData: Partial<NewsItem>) => {
@@ -96,10 +170,12 @@ export default function App() {
     );
     setEditingNewsItem(null);
     setAdminView('news_post_list');
+    showToast('News clipping updated successfully.');
   };
 
   const handleDeleteNews = (id: string) => {
     setNewsItems(newsItems.filter((item) => item.id !== id));
+    showToast('News post removed.');
   };
 
   // Handlers for Admin User Management
@@ -110,10 +186,12 @@ export default function App() {
       ...adminData,
     };
     setAdmins([newAdmin, ...admins]);
+    showToast('New Administrator officer added.');
   };
 
   const handleUpdateAdmin = (updatedAdmin: AdminUser) => {
     setAdmins(admins.map((a) => (a.id === updatedAdmin.id ? updatedAdmin : a)));
+    showToast('Admin officer updated.');
   };
 
   const handleDeleteAdmin = (id: string) => {
@@ -136,6 +214,7 @@ export default function App() {
       ...userData,
     };
     setAppUsers([newUser, ...appUsers]);
+    showToast('New portal user added.');
   };
 
   const handleUpdateAppUser = (updatedUser: AppUser) => {
@@ -255,7 +334,18 @@ export default function App() {
         onTogglePortalMode={(mode) => setPortalMode(mode)}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}
+        currentUser={currentUser}
+        onOpenAuth={handleOpenAuth}
+        onLogout={handleLogout}
       />
+
+      {/* Floating Notification Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2.5 text-xs font-medium animate-in slide-in-from-bottom-3 duration-200 border border-slate-700">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       {/* Body Area with Sidebar + Content */}
       <div className="flex-1 flex overflow-hidden">
@@ -273,141 +363,180 @@ export default function App() {
           onSelectUserView={(view) => setUserView(view)}
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
+          currentUser={currentUser}
+          onOpenAuth={handleOpenAuth}
+          onLogout={handleLogout}
         />
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-7xl mx-auto">
             {portalMode === 'admin' ? (
-              <>
-                {/* 1. Dashboard Overview */}
-                {adminView === 'dashboard' && (
-                  <AdminDashboardOverview
-                    onNavigate={(v) => {
-                      setAdminView(v);
-                      if (v === 'add_news_post') setEditingNewsItem(null);
-                    }}
-                    newsItems={newsItems}
-                    totalAdminsCount={admins.length}
-                    totalAppUsersCount={appUsers.length}
-                  />
-                )}
+              /* Admin Portal Check: If not logged in, prompt Auth */
+              !currentUser ? (
+                <div className="max-w-xl mx-auto py-8">
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-amber-900">
+                          Officer Authentication Required
+                        </p>
+                        <p className="text-[11px] text-amber-700">
+                          Please log in with your Railway credentials to access the Administration Panel.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setPortalMode('user')}
+                      className="px-3 py-1.5 bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 rounded-lg text-xs font-semibold shrink-0 transition-colors"
+                    >
+                      Browse News Portal
+                    </button>
+                  </div>
 
-                {/* 2. Admin Management */}
-                {adminView === 'admin_list' && (
-                  <AdminManagement
-                    admins={admins}
+                  <AuthModal
+                    isOpen={true}
+                    isEmbedded={true}
+                    initialMode={authModalMode}
+                    onClose={() => {}}
+                    onLoginSuccess={handleLoginSuccess}
+                    onSignupSuccess={handleSignupSuccess}
+                    divisions={divisions}
                     roles={roles}
-                    onAddAdmin={handleAddAdmin}
-                    onUpdateAdmin={handleUpdateAdmin}
-                    onDeleteAdmin={handleDeleteAdmin}
-                    onToggleStatus={handleToggleAdminStatus}
                   />
-                )}
+                </div>
+              ) : (
+                <>
+                  {/* 1. Dashboard Overview */}
+                  {adminView === 'dashboard' && (
+                    <AdminDashboardOverview
+                      onNavigate={(v) => {
+                        setAdminView(v);
+                        if (v === 'add_news_post') setEditingNewsItem(null);
+                      }}
+                      newsItems={newsItems}
+                      totalAdminsCount={admins.length}
+                      totalAppUsersCount={appUsers.length}
+                    />
+                  )}
 
-                {/* 3. App User Management */}
-                {adminView === 'app_user_list' && (
-                  <UserManagement
-                    appUsers={appUsers}
-                    onAddUser={handleAddAppUser}
-                    onUpdateUser={handleUpdateAppUser}
-                    onDeleteUser={handleDeleteAppUser}
-                    onToggleStatus={handleToggleAppUserStatus}
-                  />
-                )}
+                  {/* 2. Admin Management */}
+                  {adminView === 'admin_list' && (
+                    <AdminManagement
+                      admins={admins}
+                      roles={roles}
+                      onAddAdmin={handleAddAdmin}
+                      onUpdateAdmin={handleUpdateAdmin}
+                      onDeleteAdmin={handleDeleteAdmin}
+                      onToggleStatus={handleToggleAdminStatus}
+                    />
+                  )}
 
-                {/* 4. Role Management */}
-                {adminView === 'role_list' && (
-                  <RoleManagement
-                    roles={roles}
-                    onAddRole={handleAddRole}
-                    onUpdateRole={handleUpdateRole}
-                    onDeleteRole={handleDeleteRole}
-                  />
-                )}
+                  {/* 3. App User Management */}
+                  {adminView === 'app_user_list' && (
+                    <UserManagement
+                      appUsers={appUsers}
+                      onAddUser={handleAddAppUser}
+                      onUpdateUser={handleUpdateAppUser}
+                      onDeleteUser={handleDeleteAppUser}
+                      onToggleStatus={handleToggleAppUserStatus}
+                    />
+                  )}
 
-                {/* 5. News Post List */}
-                {adminView === 'news_post_list' && (
-                  <NewsPostList
-                    newsItems={newsItems}
-                    onAddNew={() => {
-                      setEditingNewsItem(null);
-                      setAdminView('add_news_post');
-                    }}
-                    onEditNews={(item) => {
-                      setEditingNewsItem(item);
-                      setAdminView('edit_news_post');
-                    }}
-                    onDeleteNews={handleDeleteNews}
-                    onViewDetail={() => {
-                      setPortalMode('user');
-                    }}
-                  />
-                )}
+                  {/* 4. Role Management */}
+                  {adminView === 'role_list' && (
+                    <RoleManagement
+                      roles={roles}
+                      onAddRole={handleAddRole}
+                      onUpdateRole={handleUpdateRole}
+                      onDeleteRole={handleDeleteRole}
+                    />
+                  )}
 
-                {/* 6. Add News Post Form */}
-                {adminView === 'add_news_post' && (
-                  <NewsPostForm
-                    initialData={null}
-                    onSubmit={handleAddNews}
-                    onCancel={() => setAdminView('news_post_list')}
-                    departments={departments}
-                    divisions={divisions}
-                    states={states}
-                    cities={cities}
-                  />
-                )}
+                  {/* 5. News Post List */}
+                  {adminView === 'news_post_list' && (
+                    <NewsPostList
+                      newsItems={newsItems}
+                      onAddNew={() => {
+                        setEditingNewsItem(null);
+                        setAdminView('add_news_post');
+                      }}
+                      onEditNews={(item) => {
+                        setEditingNewsItem(item);
+                        setAdminView('edit_news_post');
+                      }}
+                      onDeleteNews={handleDeleteNews}
+                      onViewDetail={() => {
+                        setPortalMode('user');
+                      }}
+                    />
+                  )}
 
-                {/* 7. Edit News Post Form */}
-                {adminView === 'edit_news_post' && (
-                  <NewsPostForm
-                    initialData={editingNewsItem}
-                    onSubmit={handleUpdateNews}
-                    onCancel={() => {
-                      setEditingNewsItem(null);
-                      setAdminView('news_post_list');
-                    }}
-                    departments={departments}
-                    divisions={divisions}
-                    states={states}
-                    cities={cities}
-                  />
-                )}
+                  {/* 6. Add News Post Form */}
+                  {adminView === 'add_news_post' && (
+                    <NewsPostForm
+                      initialData={null}
+                      onSubmit={handleAddNews}
+                      onCancel={() => setAdminView('news_post_list')}
+                      departments={departments}
+                      divisions={divisions}
+                      states={states}
+                      cities={cities}
+                    />
+                  )}
 
-                {/* 8. Master Settings (Department, Division, Source, State, City) */}
-                {(adminView === 'department_list' ||
-                  adminView === 'division_list' ||
-                  adminView === 'source_list' ||
-                  adminView === 'state_list' ||
-                  adminView === 'city_list') && (
-                  <MasterSettingsView
-                    activeTab={adminView}
-                    departments={departments}
-                    divisions={divisions}
-                    sources={sources}
-                    states={states}
-                    cities={cities}
-                    onAddDepartment={handleAddDepartment}
-                    onUpdateDepartment={(d) =>
-                      setDepartments(departments.map((x) => (x.id === d.id ? d : x)))
-                    }
-                    onDeleteDepartment={handleDeleteDepartment}
-                    onAddDivision={handleAddDivision}
-                    onDeleteDivision={handleDeleteDivision}
-                    onAddSource={handleAddSource}
-                    onDeleteSource={handleDeleteSource}
-                    onAddState={handleAddState}
-                    onDeleteState={handleDeleteState}
-                    onAddCity={handleAddCity}
-                    onDeleteCity={handleDeleteCity}
-                  />
-                )}
+                  {/* 7. Edit News Post Form */}
+                  {adminView === 'edit_news_post' && (
+                    <NewsPostForm
+                      initialData={editingNewsItem}
+                      onSubmit={handleUpdateNews}
+                      onCancel={() => {
+                        setEditingNewsItem(null);
+                        setAdminView('news_post_list');
+                      }}
+                      departments={departments}
+                      divisions={divisions}
+                      states={states}
+                      cities={cities}
+                    />
+                  )}
 
-                {/* 9. Report / Analytics */}
-                {adminView === 'report' && (
-                  <ReportAnalyticsView newsItems={newsItems} divisions={divisions} />
-                )}
-              </>
+                  {/* 8. Master Settings (Department, Division, Source, State, City) */}
+                  {(adminView === 'department_list' ||
+                    adminView === 'division_list' ||
+                    adminView === 'source_list' ||
+                    adminView === 'state_list' ||
+                    adminView === 'city_list') && (
+                    <MasterSettingsView
+                      activeTab={adminView}
+                      departments={departments}
+                      divisions={divisions}
+                      sources={sources}
+                      states={states}
+                      cities={cities}
+                      onAddDepartment={handleAddDepartment}
+                      onUpdateDepartment={(d) =>
+                        setDepartments(departments.map((x) => (x.id === d.id ? d : x)))
+                      }
+                      onDeleteDepartment={handleDeleteDepartment}
+                      onAddDivision={handleAddDivision}
+                      onDeleteDivision={handleDeleteDivision}
+                      onAddSource={handleAddSource}
+                      onDeleteSource={handleDeleteSource}
+                      onAddState={handleAddState}
+                      onDeleteState={handleDeleteState}
+                      onAddCity={handleAddCity}
+                      onDeleteCity={handleDeleteCity}
+                    />
+                  )}
+
+                  {/* 9. Report / Analytics */}
+                  {adminView === 'report' && (
+                    <ReportAnalyticsView newsItems={newsItems} divisions={divisions} />
+                  )}
+                </>
+              )
             ) : (
               /* User News Portal View */
               <UserNewsPortalView
@@ -420,8 +549,20 @@ export default function App() {
         </main>
       </div>
 
+      {/* Global Auth Modal Popup */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        initialMode={authModalMode}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        onSignupSuccess={handleSignupSuccess}
+        divisions={divisions}
+        roles={roles}
+      />
+
       {/* Global Footer */}
       <Footer onAdminClick={() => setPortalMode('admin')} />
     </div>
   );
 }
+
